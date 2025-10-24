@@ -1,14 +1,14 @@
-// index.js
 import { Client, GatewayIntentBits } from "discord.js";
 import fetch from "node-fetch";
+import dotenv from "dotenv";
 
-// ⚠️ Put your keys here (KEEP PRIVATE)
-const DISCORD_TOKEN = "MTQzMDkzNjI1MTQ5MzUxNTQ0NQ.GXH2Hc.fg9ZtOEeSOQ_JllNsgM855HQKyM4Irq4874OtM";
-const GEMINI_API_KEY = "AIzaSyCe2lO3I7IiyMuLJXMTVYQAcuhJsd5NusI";
+dotenv.config();
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
@@ -35,28 +35,20 @@ client.on("messageCreate", async (message) => {
       }
     );
 
-    const text = await response.text();
-
-    // Handle non-JSON responses gracefully
-    if (text.startsWith("<!DOCTYPE")) {
-      console.error("❌ HTML response received — check your Gemini API key or URL");
-      return message.reply("❌ Gemini returned an HTML error page — check your API key.");
-    }
-
-    const data = JSON.parse(text);
+    const data = await response.json();
     const output =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "⚠️ No valid response from Gemini.";
+      "⚠️ No response from Gemini.";
 
-    // Discord messages have a 2000-character limit
+    // Discord messages have a 2000 character limit
     const chunks = output.match(/[\s\S]{1,1900}/g) || [];
     for (const chunk of chunks) {
       await message.reply(chunk);
     }
   } catch (err) {
-    console.error("Gemini API error:", err);
+    console.error(err);
     message.reply("❌ There was an error talking to Gemini.");
   }
 });
 
-client.login(DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN);
